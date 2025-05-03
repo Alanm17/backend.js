@@ -3,13 +3,12 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 require("dotenv").config();
 
-const notificationRoutes = require("./routes/notifications");
 const { User } = require("./models/User");
 const { fetchTenantData } = require("./models/Tenant");
 const { analyticsController } = require("./controllers/analyticsController");
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = 3001;
 
 // Middleware
 app.use(cors());
@@ -58,9 +57,13 @@ app.get(
 
 app
   .route("/api/users")
-  .get(tenantMiddleware, checkFeature("userManagement"), (req, res) => {
+  .get(tenantMiddleware, checkFeature("userManagement"), async (req, res) => {
     try {
-      const safeUsers = User.map(({ password, ...user }) => user);
+      const users = await User.find(); // Fetch users from the database
+      const safeUsers = users.map((user) => {
+        const { ...safeUser } = user.toObject ? user.toObject() : user;
+        return safeUser;
+      }); // Exclude password
       res.json(safeUsers);
     } catch (err) {
       console.error(err);
@@ -73,11 +76,16 @@ app
       return res.status(400).json({ error: "Name and email are required" });
     }
 
-    const password = Math.random().toString(36).slice(-8);
-    const newUser = { name, email, status: "Pending", password };
+    const generatedPassword = Math.random().toString(36).slice(-8);
+    const newUser = {
+      name,
+      email,
+      status: "Pending",
+      password: generatedPassword,
+    };
     User.push(newUser);
 
-    const { password: _, ...safeUser } = newUser;
+    const { ...safeUser } = newUser; // Exclude password
     res.status(201).json(safeUser);
   });
 

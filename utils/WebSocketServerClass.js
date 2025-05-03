@@ -1,5 +1,6 @@
 const WebSocket = require("ws");
 const { v4: uuidv4 } = require("uuid");
+const { Buffer } = require("buffer");
 
 /**
  * WebSocketServer class for handling multiple WebSocket connections
@@ -74,7 +75,7 @@ class WebSocketServerClass {
       }
 
       // Close all client connections
-      for (const [clientId, client] of this.clients) {
+      for (const [client] of this.clients) {
         if (client.socket.readyState === WebSocket.OPEN) {
           client.socket.close(1000, "Server shutting down");
         }
@@ -297,7 +298,7 @@ class WebSocketServerClass {
       if (typeof message === "string" || message instanceof Buffer) {
         try {
           parsedMessage = JSON.parse(message.toString());
-        } catch (e) {
+        } catch {
           // If not valid JSON, use raw message
           parsedMessage = message.toString();
         }
