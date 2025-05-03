@@ -14,6 +14,11 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
+app.use(
+  cors({
+    origin: "https://your-frontend.vercel.app", // or '*' for development
+  })
+);
 
 // Tenant Middleware
 const tenantMiddleware = async (req, res, next) => {
