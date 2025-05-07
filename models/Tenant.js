@@ -21,7 +21,7 @@ const Tenant = {
     domain: "startx.example.com",
     logo: "🚀",
     config: {
-      theme: "dark",
+      theme: "light",
       features: {
         analytics: true,
         userManagement: true,
@@ -37,12 +37,12 @@ const Tenant = {
     domain: "quantum.example.com",
     logo: "⚛️",
     config: {
-      theme: "dark",
+      theme: "light",
       features: {
-        analytics: false,
-        userManagement: true,
+        analytics: true,
+        userManagement: false,
         chat: true,
-        notifications: true,
+        notifications: false,
       },
       primaryColor: "#8b5cf6",
     },
@@ -51,7 +51,7 @@ const Tenant = {
 
 // Fetch tenant data
 const fetchTenantData = async (tenantId) => {
-  return Tenant[tenantId] || Tenant["acme"];
+  return Tenant[tenantId];
 };
 
 module.exports = { fetchTenantData, Tenant };

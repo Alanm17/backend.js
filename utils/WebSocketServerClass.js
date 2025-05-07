@@ -2,9 +2,6 @@ const WebSocket = require("ws");
 const { v4: uuidv4 } = require("uuid");
 const { Buffer } = require("buffer");
 
-/**
- * WebSocketServer class for handling multiple WebSocket connections
- */
 class WebSocketServerClass {
   constructor(options = {}) {
     // Default configuration
