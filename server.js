@@ -1,83 +1,39 @@
 const express = require("express");
 const cors = require("cors");
+const bodyParser = require("body-parser");
 require("dotenv").config();
 
-const { Users } = require("./models/Users");
+const { User } = require("./models/User");
 const { fetchTenantData } = require("./models/Tenant");
 const { analyticsController } = require("./controllers/analyticsController");
 
 const app = express();
 const PORT = 3001;
 
-// Cache settings
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
-const tenantCache = {};
-const analyticsCache = {};
-const usersCache = {};
-
-// CORS configuration
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
 app.use(
   cors({
-    origin: "http://localhost:5173", // Frontend URL
-    methods: ["GET"], // Adjust methods if needed
-    allowedHeaders: ["x-tenant-id"],
+    origin: "https://your-frontend.vercel.app", // or '*' for development
   })
 );
 
-// Performance monitoring middleware
-const performanceMiddleware = (req, res, next) => {
-  req.startTime = Date.now();
-
-  // Override res.json to add timing information
-  const originalJson = res.json;
-  res.json = function (body) {
-    const duration = Date.now() - req.startTime;
-    console.log(`[${req.method}] ${req.path} - Response time: ${duration}ms`);
-    return originalJson.call(this, body);
-  };
-
-  next();
-};
-
-app.use(performanceMiddleware);
-
-// Tenant Middleware with caching
+// Tenant Middleware
 const tenantMiddleware = async (req, res, next) => {
-  const tenantId = req.headers["x-tenant-id"];
-  console.log("Received tenant ID:", tenantId);
-
+  const tenantId = req.headers["x-tenant-id"] || req.query.tenantId;
   if (!tenantId || typeof tenantId !== "string") {
     return res.status(400).json({ error: "Tenant ID is required" });
   }
+  app.use("/api", tenantMiddleware); // or apply per-route
 
   try {
-    // Check cache first
-    const cacheKey = `tenant_${tenantId}`;
-    const cachedData = tenantCache[cacheKey];
-
-    if (cachedData && Date.now() - cachedData.timestamp < CACHE_TTL) {
-      console.log(`Using cached tenant data for ${tenantId}`);
-      req.tenant = cachedData.data;
-      return next();
-    }
-
-    // Fetch if not in cache or expired
     const tenant = await fetchTenantData(tenantId);
-
-    if (!tenant) {
-      return res.status(404).json({ error: "Tenant not found" });
-    }
-
-    // Update cache
-    tenantCache[cacheKey] = {
-      data: tenant,
-      timestamp: Date.now(),
-    };
-
+    if (!tenant) return res.status(404).json({ error: "Tenant not found" });
     req.tenant = tenant;
     next();
   } catch (err) {
-    console.error("Tenant middleware error:", err);
+    console.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -85,136 +41,80 @@ const tenantMiddleware = async (req, res, next) => {
 // Feature Toggle Middleware
 const checkFeature = (feature) => (req, res, next) => {
   if (!req.tenant?.config?.features?.[feature]) {
-    return res
-      .status(403)
-      .json({ error: `${feature} not enabled for this tenant` });
+    return res.status(403).json({ error: `${feature} not enabled` });
   }
   next();
 };
 
-// API Routes
-app.get("/api/tenant", tenantMiddleware, (req, res) => {
-  try {
-    res.json(req.tenant);
-  } catch (error) {
-    console.error("Error in tenant route:", error);
-    res.status(500).json({ error: "Failed to retrieve tenant data" });
-  }
-});
+app.get("/api/tenant", tenantMiddleware, (req, res) => res.json(req.tenant));
 
 app.get(
   "/api/analytics",
   tenantMiddleware,
   checkFeature("analytics"),
-  async (req, res) => {
-    try {
-      const tenantId = req.headers["x-tenant-id"];
-      const cacheKey = `analytics_${tenantId}`;
-
-      // Check cache
-      const cachedData = analyticsCache[cacheKey];
-      if (cachedData && Date.now() - cachedData.timestamp < CACHE_TTL) {
-        console.log(`Using cached analytics data for ${tenantId}`);
-        return res.json(cachedData.data);
-      }
-
-      // Simulate async operation if analyticsController is an async function
-      const data =
-        typeof analyticsController === "function"
-          ? await analyticsController(req.tenant)
-          : analyticsController;
-
-      // Update cache
-      analyticsCache[cacheKey] = {
-        data,
-        timestamp: Date.now(),
-      };
-
-      res.json(data);
-    } catch (error) {
-      console.error("Error in analytics route:", error);
-      res.status(500).json({ error: "Failed to retrieve analytics data" });
-    }
-  }
+  (req, res) => res.json(analyticsController)
 );
+
+app
+  .route("/api/users")
+  .get(tenantMiddleware, checkFeature("userManagement"), async (req, res) => {
+    try {
+      const users = await User.find(); // Fetch users from the database
+      const safeUsers = users.map((user) => {
+        const { ...safeUser } = user.toObject ? user.toObject() : user;
+        return safeUser;
+      }); // Exclude password
+      res.json(safeUsers);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  })
+  .post(tenantMiddleware, checkFeature("userManagement"), (req, res) => {
+    const { name, email } = req.body;
+    if (!name || !email) {
+      return res.status(400).json({ error: "Name and email are required" });
+    }
+
+    const generatedPassword = Math.random().toString(36).slice(-8);
+    const newUser = {
+      name,
+      email,
+      status: "Pending",
+      password: generatedPassword,
+    };
+    User.push(newUser);
+
+    const { ...safeUser } = newUser; // Exclude password
+    res.status(201).json(safeUser);
+  });
 
 app.get(
-  "/api/users",
+  "/api/notifications",
   tenantMiddleware,
-  checkFeature("userManagement"),
-  async (req, res) => {
-    try {
-      const tenantId = req.headers["x-tenant-id"];
-      const cacheKey = `users_${tenantId}`;
-
-      // Check cache
-      const cachedData = usersCache[cacheKey];
-      if (cachedData && Date.now() - cachedData.timestamp < CACHE_TTL) {
-        console.log(`Using cached users data for ${tenantId}`);
-        return res.json(cachedData.data);
-      }
-
-      // Get users data (using await in case Users is or becomes async)
-      const data = Array.isArray(Users)
-        ? Users
-        : typeof Users === "function"
-        ? await Users(req.tenant)
-        : [];
-
-      // Update cache
-      usersCache[cacheKey] = {
-        data,
-        timestamp: Date.now(),
-      };
-
-      res.json(data);
-    } catch (error) {
-      console.error("Error in users route:", error);
-      res.status(500).json({ error: "Failed to retrieve users data" });
-    }
+  checkFeature("notifications"),
+  (req, res) => {
+    const notifications = [
+      {
+        id: 1,
+        message: "System update available",
+        timestamp: new Date().toISOString(),
+        read: false,
+      },
+      {
+        id: 2,
+        message: "New user joined the system",
+        timestamp: new Date().toISOString(),
+        read: false,
+      },
+    ];
+    res.json(notifications);
   }
 );
-
-// Error handling middleware
-app.use((err, req, res) => {
-  console.error("Unhandled error:", err);
-  res.status(500).json({
-    error: "An unexpected error occurred",
-    message: err.message, // Include error message by default for debugging
-  });
-});
 
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`API available at http://localhost:${PORT}/api`);
 });
-
-// Cache cleanup interval (optional)
-setInterval(() => {
-  const now = Date.now();
-  // Clean tenant cache
-  Object.keys(tenantCache).forEach((key) => {
-    if (now - tenantCache[key].timestamp > CACHE_TTL) {
-      delete tenantCache[key];
-    }
-  });
-
-  // Clean analytics cache
-  Object.keys(analyticsCache).forEach((key) => {
-    if (now - analyticsCache[key].timestamp > CACHE_TTL) {
-      delete analyticsCache[key];
-    }
-  });
-
-  // Clean users cache
-  Object.keys(usersCache).forEach((key) => {
-    if (now - usersCache[key].timestamp > CACHE_TTL) {
-      delete usersCache[key];
-    }
-  });
-
-  console.log("Cache cleanup performed");
-}, CACHE_TTL); // Run cleanup at the same interval as the TTL
 
 module.exports = { app };
