@@ -18,10 +18,9 @@ const usersCache = {};
 // CORS configuration
 app.use(
   cors({
-    origin: "https://dashbro.netlify.app", // Replace with your actual frontend URL
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["x-tenant-id"], // Adjust headers as needed
+    origin: "http://localhost:5173", // Frontend URL
+    methods: ["GET"], // Adjust methods if needed
+    allowedHeaders: ["x-tenant-id"],
   })
 );
 
