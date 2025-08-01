@@ -35,15 +35,13 @@ const usersCache = {};
 app.use(
   cors({
     origin: (origin, callback) => {
-      // For tools like Postman or curl, origin is undefined, allow them
       if (!origin) return callback(null, true);
 
-      // Remove trailing slash from origin
       const cleanedOrigin = origin.replace(/\/$/, "");
 
       if (allowedOrigins.includes(cleanedOrigin)) {
-        // Pass cleanedOrigin so Access-Control-Allow-Origin matches exactly
-        callback(null, cleanedOrigin);
+        // ✅ Pass 'true' so Express uses request's actual origin
+        callback(null, true);
       } else {
         console.log("❌ CORS blocked:", origin);
         callback(new Error("Not allowed by CORS"));
