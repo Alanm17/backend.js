@@ -49,10 +49,9 @@ const Tenant = {
   },
 };
 
-// Fetch tenant data by numeric ID
-const fetchTenantData = async (id) => {
-  const tenant = Object.values(Tenant).find((t) => t.id === parseInt(id));
-  return tenant || null;
+// Fetch tenant data by string key
+const fetchTenantData = async (tenantKey) => {
+  return Tenant[tenantKey] || null;
 };
 
 module.exports = { fetchTenantData, Tenant };
