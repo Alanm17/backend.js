@@ -12,7 +12,7 @@ const app = express();
 const server = http.createServer(app);
 const io = require("socket.io")(server, {
   cors: {
-    origin: "https://dashbro.netlify.app",
+    origin: ["https://dashbro.netlify.app", "http://localhost:5174"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization", "x-tenant-id"],
     credentials: true,
@@ -31,10 +31,20 @@ const usersCache = {};
 app.use(
   cors({
     origin: (origin, callback) => {
-      console.log("CORS Origin request:", origin);
-      if (origin === "https://dashbro.netlify.app") {
+      console.log("🟡 CORS Origin request:", origin);
+
+      const allowedOrigins = [
+        "https://dashbro.netlify.app",
+        "http://localhost:5174",
+      ];
+
+      // Remove trailing slash if any
+      const cleanedOrigin = origin?.replace(/\/$/, "");
+
+      if (!origin || allowedOrigins.includes(cleanedOrigin)) {
         callback(null, true);
       } else {
+        console.log("❌ CORS blocked:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },

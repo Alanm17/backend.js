@@ -25,7 +25,7 @@ const Tenant = {
       features: {
         analytics: true,
         userManagement: true,
-        chat: false,
+        chat: true,
         notifications: false,
       },
       primaryColor: "#10b981",
@@ -39,12 +39,12 @@ const Tenant = {
     config: {
       theme: "dark",
       features: {
-        analytics: false,
+        analytics: true,
         userManagement: true,
         chat: true,
         notifications: true,
       },
-      primaryColor: "#8b5cf6",
+      primaryColor: "#10b981",
     },
   },
 };
