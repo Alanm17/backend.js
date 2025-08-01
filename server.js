@@ -7,6 +7,17 @@ const { fetchTenantData } = require("./models/Tenant");
 const { analyticsController } = require("./controllers/analyticsController");
 
 const app = express();
+const http = require("http");
+const server = http.createServer(app);
+const { Server } = require("socket.io");
+const io = new Server(server, {
+  cors: {
+    origin: "https://dashbro.netlify.app/",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["x-tenant-id"],
+  },
+});
+const bodyParser = require("body-parser");
 const PORT = 3001;
 
 // Cache settings
@@ -23,6 +34,8 @@ app.use(
     allowedHeaders: ["x-tenant-id"],
   })
 );
+
+app.use(bodyParser.json());
 
 // Performance monitoring middleware
 const performanceMiddleware = (req, res, next) => {
@@ -175,8 +188,13 @@ app.get(
   }
 );
 
+// Register notifications route
+const notificationsRoute = require("./routes/notifications");
+notificationsRoute(app, io);
+
 // Error handling middleware
-app.use((err, req, res) => {
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
   res.status(500).json({
     error: "An unexpected error occurred",
@@ -185,7 +203,7 @@ app.use((err, req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`API available at http://localhost:${PORT}/api`);
 });
@@ -216,5 +234,3 @@ setInterval(() => {
 
   console.log("Cache cleanup performed");
 }, CACHE_TTL); // Run cleanup at the same interval as the TTL
-
-module.exports = { app };

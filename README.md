@@ -26,9 +26,14 @@ This is a Node.js and Express-based REST API server that supports **multi-tenanc
 
 ```bash
 1 git clone <your-repository-url>
-2 cd backend
+2 cd backend.js
 
 3 npm install
 4 node server.js
 ```
+
 # backend.js
+
+## Environment Variables
+
+If your project requires environment variables, create a `.env` file in the root directory. See `.env.example` or documentation for required variables.
