@@ -13,16 +13,6 @@ const server = http.createServer(app);
 
 const allowedOrigins = ["https://dashbro.netlify.app", "http://localhost:5174"];
 
-// Setup Socket.IO with matching CORS config
-const io = require("socket.io")(server, {
-  cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-tenant-id"],
-    credentials: true,
-  },
-});
-
 const PORT = process.env.PORT || 3001;
 
 // ===== Cache Settings =====
@@ -45,7 +35,6 @@ app.use(
       );
 
       if (isAllowed) {
-        // ✅ Explicitly set the allowed origin (no trailing slash ever)
         callback(null, true);
       } else {
         console.log("❌ CORS blocked:", origin);
@@ -53,7 +42,7 @@ app.use(
       }
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-tenant-id"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Tenant-ID"],
     credentials: true,
   })
 );
@@ -178,10 +167,6 @@ app.get(
     }
   }
 );
-
-// ===== Notifications Route (Socket.IO) =====
-const notificationsRoute = require("./routes/notifications");
-notificationsRoute(app, io);
 
 // ===== Global Error Handler =====
 app.use((err, req, res, next) => {
