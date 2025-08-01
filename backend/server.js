@@ -10,9 +10,13 @@ const { analyticsController } = require("./controllers/analyticsController");
 
 const app = express();
 const server = http.createServer(app);
+
+const allowedOrigins = ["https://dashbro.netlify.app", "http://localhost:5174"];
+
+// Setup Socket.IO with matching CORS config
 const io = require("socket.io")(server, {
   cors: {
-    origin: ["https://dashbro.netlify.app", "http://localhost:5174"],
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization", "x-tenant-id"],
     credentials: true,
@@ -27,22 +31,19 @@ const tenantCache = {};
 const analyticsCache = {};
 const usersCache = {};
 
-// ===== Middleware =====
+// ===== CORS Middleware with exact allowed origin header =====
 app.use(
   cors({
     origin: (origin, callback) => {
-      console.log("🟡 CORS Origin request:", origin);
+      // For tools like Postman or curl, origin is undefined, allow them
+      if (!origin) return callback(null, true);
 
-      const allowedOrigins = [
-        "https://dashbro.netlify.app",
-        "http://localhost:5174",
-      ];
+      // Remove trailing slash from origin
+      const cleanedOrigin = origin.replace(/\/$/, "");
 
-      // Remove trailing slash if any
-      const cleanedOrigin = origin?.replace(/\/$/, "");
-
-      if (!origin || allowedOrigins.includes(cleanedOrigin)) {
-        callback(null, true);
+      if (allowedOrigins.includes(cleanedOrigin)) {
+        // Pass cleanedOrigin so Access-Control-Allow-Origin matches exactly
+        callback(null, cleanedOrigin);
       } else {
         console.log("❌ CORS blocked:", origin);
         callback(new Error("Not allowed by CORS"));
@@ -56,14 +57,14 @@ app.use(
 
 app.use(bodyParser.json());
 
-// ===== Performance Logging =====
+// ===== Performance Logging Middleware =====
 app.use((req, res, next) => {
   req.startTime = Date.now();
-  const originalJson = res.json;
-  res.json = function (body) {
+  const originalJson = res.json.bind(res);
+  res.json = (body) => {
     const duration = Date.now() - req.startTime;
     console.log(`[${req.method}] ${req.path} - ${duration}ms`);
-    return originalJson.call(this, body);
+    return originalJson(body);
   };
   next();
 });
