@@ -30,7 +30,14 @@ const usersCache = {};
 // ===== Middleware =====
 app.use(
   cors({
-    origin: "https://dashbro.netlify.app",
+    origin: (origin, callback) => {
+      console.log("CORS Origin request:", origin);
+      if (origin === "https://dashbro.netlify.app") {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization", "x-tenant-id"],
     credentials: true,
