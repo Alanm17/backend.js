@@ -12,7 +12,7 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "https://dashbro.netlify.app"],
+    origin: "https://dashbro.netlify.app",
 
     methods: ["GET", "POST"],
     allowedHeaders: ["x-tenant-id"],
@@ -30,9 +30,9 @@ const usersCache = {};
 // CORS configuration
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://dashbro.netlify.app"],
+    origin: "https://dashbro.netlify.app/",
 
-    methods: ["GET"], // Adjust methods if needed
+    methods: [*], // Adjust methods if needed
     allowedHeaders: ["x-tenant-id"],
   })
 );
