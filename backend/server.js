@@ -32,15 +32,20 @@ const analyticsCache = {};
 const usersCache = {};
 
 // ===== CORS Middleware with exact allowed origin header =====
+
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
 
-      const cleanedOrigin = origin.replace(/\/$/, "");
+      // ✅ Normalize both sides (remove trailing slash)
+      const normalizedOrigin = origin.replace(/\/$/, "");
+      const isAllowed = allowedOrigins.some(
+        (o) => o.replace(/\/$/, "") === normalizedOrigin
+      );
 
-      if (allowedOrigins.includes(cleanedOrigin)) {
-        // ✅ Pass 'true' so Express uses request's actual origin
+      if (isAllowed) {
+        // ✅ Explicitly set the allowed origin (no trailing slash ever)
         callback(null, true);
       } else {
         console.log("❌ CORS blocked:", origin);
@@ -52,6 +57,8 @@ app.use(
     credentials: true,
   })
 );
+
+// ✅ Ensure preflight responses always have correct CORS headers
 app.options("*", cors());
 app.use(bodyParser.json());
 
