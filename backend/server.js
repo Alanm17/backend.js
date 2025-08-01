@@ -14,7 +14,7 @@ const io = new Server(server, {
   cors: {
     origin: "https://dashbro.netlify.app",
 
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["x-tenant-id"],
   },
 });
@@ -32,7 +32,7 @@ app.use(
   cors({
     origin: "https://dashbro.netlify.app/",
 
-    methods: [*], // Adjust methods if needed
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"], // Adjust methods if needed
     allowedHeaders: ["x-tenant-id"],
   })
 );
